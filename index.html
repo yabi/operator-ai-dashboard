@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator AI - Lead Discovery Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header h1 { color: #2d3748; font-size: 32px; margin-bottom: 10px; }
+        .header p { color: #718096; font-size: 16px; }
+        .search-section { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .input-group { display: flex; gap: 15px; margin-bottom: 20px; }
+        input, select { flex: 1; padding: 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; transition: all 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .results { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .lead-card { background: #f7fafc; border-left: 4px solid #667eea; padding: 20px; margin-bottom: 15px; border-radius: 8px; transition: all 0.3s; }
+        .lead-card:hover { transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .lead-name { font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 10px; }
+        .lead-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; color: #718096; font-size: 14px; }
+        .loading { text-align: center; padding: 40px; color: #718096; }
+        .error { background: #fed7d7; color: #c53030; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Operator AI - Lead Discovery</h1>
+            <p>AI-Powered Lead Generation & Enrichment Platform</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="input-group">
+                <input type="text" id="industry" placeholder="Industry (e.g., tech, healthcare, finance)" />
+                <input type="text" id="location" placeholder="Location (e.g., San Francisco, CA)" />
+                <select id="revenue">
+                    <option value="">Select Revenue Range</option>
+                    <option value="0-1M">$0-1M</option>
+                    <option value="1M-10M">$1M-10M</option>
+                    <option value="10M-50M">$10M-50M</option>
+                    <option value="50M+">$50M+</option>
+                </select>
+            </div>
+            <button id="searchBtn" onclick="searchLeads()">🔍 Find Leads</button>
+            <div id="error"></div>
+        </div>
+        
+        <div class="results">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">Lead Results</h2>
+            <div id="leads"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'https://operator-ai-a37oy3yaeq-uc.a.run.app';
+        
+        async function searchLeads() {
+            const industry = document.getElementById('industry').value;
+            const location = document.getElementById('location').value;
+            const revenue = document.getElementById('revenue').value;
+            const btn = document.getElementById('searchBtn');
+            const leadsDiv = document.getElementById('leads');
+            const errorDiv = document.getElementById('error');
+            
+            errorDiv.innerHTML = '';
+            btn.disabled = true;
+            btn.textContent = '⏳ Searching...';
+            leadsDiv.innerHTML = '<div class="loading">Finding your perfect leads...</div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/discover`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ industry, location, revenue_range: revenue })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.leads && data.leads.length > 0) {
+                        leadsDiv.innerHTML = data.leads.map(lead => `
+                            <div class="lead-card">
+                                <div class="lead-name">${lead.name}</div>
+                                <div class="lead-details">
+                                    <div>📍 ${lead.location || 'N/A'}</div>
+                                    <div>🏢 ${lead.industry || 'N/A'}</div>
+                                    <div>💰 ${lead.revenue || 'N/A'}</div>
+                                    <div>📞 ${lead.phone || 'N/A'}</div>
+                                    <div>✉️ ${lead.email || 'N/A'}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        leadsDiv.innerHTML = '<div class="loading">No leads found. Try different search criteria.</div>';
+                    }
+                } else {
+                    throw new Error(data.detail || 'Failed to fetch leads');
+                }
+            } catch (error) {
+                errorDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                leadsDiv.innerHTML = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Find Leads';
+            }
+        }
+    </script>
+</body>
+</html>
